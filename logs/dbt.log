@@ -1,0 +1,30 @@
+[0m09:33:26.058851 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C161254290>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C1612540D0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C161256250>]}
+
+
+============================== 09:33:26.063876 | 33d94ecf-25b6-407e-9afe-23d4e15e2b1d ==============================
+[0m09:33:26.063876 [info ] [MainThread]: Running with dbt=1.11.8
+[0m09:33:26.064909 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'no_print': 'None', 'version_check': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'target_path': 'None', 'printer_width': '80', 'write_json': 'True', 'introspect': 'True', 'log_cache_events': 'False', 'empty': 'None', 'cache_selected_only': 'False', 'log_format': 'default', 'debug': 'False', 'fail_fast': 'False', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'profiles_dir': 'C:\\Users\\jachs\\.dbt', 'invocation_command': 'dbt init diesel_emissions', 'use_colors': 'True', 'indirect_selection': 'eager', 'use_experimental_parser': 'False', 'log_path': 'logs'}
+[0m09:33:26.091890 [info ] [MainThread]: Creating dbt configuration folder at C:\Users\jachs\.dbt
+[0m09:33:26.094343 [debug] [MainThread]: Starter project path: C:\Users\jachs\AppData\Local\Programs\Python\Python311\Lib\site-packages\dbt\include\starter_project
+[0m09:33:26.170969 [info ] [MainThread]: 
+Your new dbt project "diesel_emissions" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m09:33:26.172086 [info ] [MainThread]: Setting up your profile.
+[0m09:36:24.204044 [info ] [MainThread]: Profile diesel_emissions written to C:\Users\jachs\.dbt\profiles.yml using target's profile_template.yml and your supplied values. Run 'dbt debug' to validate the connection.
+[0m09:36:24.206336 [debug] [MainThread]: Command `dbt init` succeeded at 09:36:24.206336 after 178.21 seconds
+[0m09:36:24.206336 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C1612AF590>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C1610E17D0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x000001C1612BC3D0>]}
+[0m09:36:24.207740 [debug] [MainThread]: Flushing usage events
+[0m09:36:24.915461 [debug] [MainThread]: An error was encountered while trying to flush usage events

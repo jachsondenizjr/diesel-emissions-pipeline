@@ -1,0 +1,16 @@
+# Credentials — NEVER commit
+secret/
+*.json
+
+# dbt
+diesel_emissions/target/
+diesel_emissions/logs/
+diesel_emissions/.user.yml
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Data files
+*.csv

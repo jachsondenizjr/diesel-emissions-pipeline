@@ -1,0 +1,288 @@
+"""
+Diesel Engine Dynamometer Data Generator
+=========================================
+Simulates test data from a diesel engine dynamometer following the
+WHSC (World Harmonized Stationary Cycle) — 13 operating modes.
+
+Emissions modeled: NOx, CO, CO2, HC, PM (Particulate Matter)
+Compared against EPA Tier 4 Final and Euro VI limits.
+
+Output: CSV file ready for ingestion into GCP Cloud Storage / BigQuery.
+
+Author: [Your Name]
+Project: diesel-emissions-pipeline
+"""
+
+import csv
+import random
+import math
+import os
+from datetime import datetime, timedelta
+
+# ─── EPA Tier 4 Final limits (g/kWh) ────────────────────────────────────────
+EPA_TIER4_LIMITS = {
+    "NOx":  0.40,   # g/kWh
+    "CO":   3.50,
+    "HC":   0.19,
+    "PM":   0.02,
+}
+
+# ─── Euro VI limits (g/kWh) ─────────────────────────────────────────────────
+EURO_VI_LIMITS = {
+    "NOx":  0.40,
+    "CO":   4.00,
+    "HC":   0.16,
+    "PM":   0.01,
+}
+
+# ─── WHSC 13 operating modes ─────────────────────────────────────────────────
+# Each mode: (mode_id, speed_pct, torque_pct, weight_factor)
+# speed_pct  = % of rated speed (0% = idle, 100% = rated)
+# torque_pct = % of max torque at that speed
+# weight_factor = used in weighted emissions calculation
+WHSC_MODES = [
+    (1,   0,    0,    0.15),   # Idle
+    (2,   55,  100,   0.08),
+    (3,   55,   75,   0.10),
+    (4,   55,   50,   0.10),
+    (5,   55,   25,   0.05),
+    (6,   55,   10,   0.05),
+    (7,  100,  100,   0.09),
+    (8,  100,   75,   0.10),
+    (9,  100,   50,   0.08),
+    (10, 100,   25,   0.05),
+    (11, 100,   10,   0.05),
+    (12,  50,  100,   0.05),
+    (13,  75,   75,   0.05),
+]
+
+# ─── Engine parameters ───────────────────────────────────────────────────────
+RATED_SPEED_RPM   = 2200     # rpm at 100%
+IDLE_SPEED_RPM    = 700
+MAX_TORQUE_NM     = 1800     # Nm at rated speed
+DISPLACEMENT_L    = 7.2      # litres
+NUM_CYLINDERS     = 6
+ENGINE_ID_OPTIONS = ["ENG-001", "ENG-002", "ENG-003"]
+TEST_CELL_OPTIONS = ["DYNO-A", "DYNO-B"]
+
+
+def calc_rpm(speed_pct: float) -> float:
+    """Convert speed % to actual RPM."""
+    if speed_pct == 0:
+        return IDLE_SPEED_RPM
+    return IDLE_SPEED_RPM + (speed_pct / 100) * (RATED_SPEED_RPM - IDLE_SPEED_RPM)
+
+
+def calc_torque(torque_pct: float, rpm: float) -> float:
+    """Convert torque % to actual Nm, slightly reduced at idle."""
+    if rpm <= IDLE_SPEED_RPM:
+        return 0.0
+    return (torque_pct / 100) * MAX_TORQUE_NM
+
+
+def calc_power_kw(torque_nm: float, rpm: float) -> float:
+    """P (kW) = Torque (Nm) * RPM / 9549"""
+    return torque_nm * rpm / 9549.0
+
+
+def calc_fuel_consumption(power_kw: float, rpm: float) -> float:
+    """
+    Estimate fuel consumption (g/h).
+    BSFC (brake specific fuel consumption) varies with load — roughly 200–260 g/kWh.
+    """
+    if power_kw <= 0:
+        return random.uniform(400, 600)  # idle fuel flow g/h
+    bsfc = random.uniform(205, 255)
+    return power_kw * bsfc
+
+
+def calc_emissions(power_kw: float, rpm: float, torque_nm: float, mode_id: int):
+    """
+    Simulate exhaust emissions in g/kWh.
+    Higher load → higher NOx (combustion temp), lower CO.
+    Idle → high CO, low NOx.
+    Adds realistic random variation (sensor noise + cycle-to-cycle variability).
+    """
+    load_factor = torque_nm / MAX_TORQUE_NM if torque_nm > 0 else 0
+
+    # NOx: peaks at high load / high temp
+    nox_base = 0.10 + load_factor * 0.55
+    nox = nox_base * random.uniform(0.85, 1.20)
+
+    # CO: higher at low load and idle
+    co_base = 4.0 - load_factor * 3.2
+    co = max(0.1, co_base * random.uniform(0.80, 1.25))
+
+    # CO2: proportional to fuel burn
+    co2_base = 550 + load_factor * 150
+    co2 = co2_base * random.uniform(0.97, 1.03)
+
+    # HC: higher at idle and cold start (mode 1)
+    hc_base = 0.25 - load_factor * 0.12 if mode_id == 1 else 0.12 - load_factor * 0.06
+    hc = max(0.01, hc_base * random.uniform(0.80, 1.20))
+
+    # PM: correlated with load, sensitive to fuel quality
+    pm_base = 0.005 + load_factor * 0.025
+    pm = pm_base * random.uniform(0.70, 1.40)
+
+    return {
+        "NOx_g_kWh":  round(nox, 4),
+        "CO_g_kWh":   round(co, 4),
+        "CO2_g_kWh":  round(co2, 2),
+        "HC_g_kWh":   round(hc, 4),
+        "PM_g_kWh":   round(pm, 5),
+    }
+
+
+def calc_temperatures(power_kw: float, mode_id: int):
+    """Simulate engine temperatures."""
+    load_factor = power_kw / calc_power_kw(MAX_TORQUE_NM, RATED_SPEED_RPM)
+    load_factor = min(max(load_factor, 0), 1)
+
+    coolant_temp   = round(75 + load_factor * 20 + random.uniform(-3, 3), 1)
+    exhaust_temp   = round(250 + load_factor * 400 + random.uniform(-20, 20), 1)
+    oil_temp       = round(85 + load_factor * 15 + random.uniform(-2, 2), 1)
+    intake_air_temp = round(35 + random.uniform(-5, 10), 1)
+
+    return {
+        "coolant_temp_C":    coolant_temp,
+        "exhaust_temp_C":    exhaust_temp,
+        "oil_temp_C":        oil_temp,
+        "intake_air_temp_C": intake_air_temp,
+    }
+
+
+def check_compliance(emissions: dict) -> dict:
+    """Compare emissions against EPA Tier 4 and Euro VI limits."""
+    return {
+        "epa_tier4_NOx_pass":  emissions["NOx_g_kWh"] <= EPA_TIER4_LIMITS["NOx"],
+        "epa_tier4_CO_pass":   emissions["CO_g_kWh"]  <= EPA_TIER4_LIMITS["CO"],
+        "epa_tier4_HC_pass":   emissions["HC_g_kWh"]  <= EPA_TIER4_LIMITS["HC"],
+        "epa_tier4_PM_pass":   emissions["PM_g_kWh"]  <= EPA_TIER4_LIMITS["PM"],
+        "euro6_NOx_pass":      emissions["NOx_g_kWh"] <= EURO_VI_LIMITS["NOx"],
+        "euro6_CO_pass":       emissions["CO_g_kWh"]  <= EURO_VI_LIMITS["CO"],
+        "euro6_HC_pass":       emissions["HC_g_kWh"]  <= EURO_VI_LIMITS["HC"],
+        "euro6_PM_pass":       emissions["PM_g_kWh"]  <= EURO_VI_LIMITS["PM"],
+    }
+
+
+def generate_test_run(
+    test_id: str,
+    engine_id: str,
+    test_cell: str,
+    start_time: datetime,
+    num_samples_per_mode: int = 10,
+) -> list[dict]:
+    """
+    Generate one complete WHSC test run.
+    Returns a list of measurement rows.
+    """
+    rows = []
+    current_time = start_time
+
+    for mode_id, speed_pct, torque_pct, weight in WHSC_MODES:
+        for sample in range(num_samples_per_mode):
+
+            rpm     = calc_rpm(speed_pct) + random.uniform(-15, 15)
+            torque  = calc_torque(torque_pct, rpm) + random.uniform(-10, 10)
+            torque  = max(0, torque)
+            power   = calc_power_kw(torque, rpm)
+            fuel    = calc_fuel_consumption(power, rpm)
+            emissions = calc_emissions(power, rpm, torque, mode_id)
+            temps   = calc_temperatures(power, mode_id)
+            compliance = check_compliance(emissions)
+
+            boost_pressure = round(1.0 + (torque / MAX_TORQUE_NM) * 2.2 + random.uniform(-0.05, 0.05), 2)
+            lambda_value   = round(1.6 - (torque / MAX_TORQUE_NM) * 0.4 + random.uniform(-0.03, 0.03), 3)
+
+            row = {
+                "test_id":             test_id,
+                "engine_id":           engine_id,
+                "test_cell":           test_cell,
+                "timestamp":           current_time.isoformat(),
+                "whsc_mode":           mode_id,
+                "mode_speed_pct":      speed_pct,
+                "mode_torque_pct":     torque_pct,
+                "mode_weight_factor":  weight,
+                "sample_num":          sample + 1,
+                "rpm":                 round(rpm, 1),
+                "torque_Nm":           round(torque, 1),
+                "power_kW":            round(power, 2),
+                "fuel_flow_g_h":       round(fuel, 1),
+                "boost_pressure_bar":  boost_pressure,
+                "lambda":              lambda_value,
+                **emissions,
+                **temps,
+                **compliance,
+            }
+            rows.append(row)
+            current_time += timedelta(seconds=6)
+
+    return rows
+
+
+def generate_dataset(
+    num_tests: int = 20,
+    num_samples_per_mode: int = 10,
+    output_path: str = "dyno_emissions_data.csv",
+):
+    """
+    Generate a full dataset with multiple test runs and write to CSV.
+
+    Args:
+        num_tests: Number of complete WHSC test runs to simulate.
+        num_samples_per_mode: Sensor readings per WHSC mode per test.
+        output_path: Output CSV file path.
+    """
+    all_rows = []
+    base_time = datetime(2024, 1, 15, 7, 0, 0)
+
+    print(f"Generating {num_tests} WHSC test runs...")
+
+    for i in range(num_tests):
+        test_id   = f"TEST-{str(i + 1).zfill(4)}"
+        engine_id = random.choice(ENGINE_ID_OPTIONS)
+        test_cell = random.choice(TEST_CELL_OPTIONS)
+        start     = base_time + timedelta(hours=i * 3)
+
+        rows = generate_test_run(
+            test_id=test_id,
+            engine_id=engine_id,
+            test_cell=test_cell,
+            start_time=start,
+            num_samples_per_mode=num_samples_per_mode,
+        )
+        all_rows.extend(rows)
+
+    # Write CSV
+    if all_rows:
+        fieldnames = list(all_rows[0].keys())
+        with open(output_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(all_rows)
+
+        total_rows = len(all_rows)
+        print(f"\nDone! {total_rows:,} rows written to: {output_path}")
+        print(f"  Tests generated : {num_tests}")
+        print(f"  WHSC modes      : {len(WHSC_MODES)}")
+        print(f"  Samples/mode    : {num_samples_per_mode}")
+        print(f"  Columns         : {len(fieldnames)}")
+
+        # Quick compliance summary
+        nox_failures = sum(1 for r in all_rows if not r["epa_tier4_NOx_pass"])
+        pm_failures  = sum(1 for r in all_rows if not r["epa_tier4_PM_pass"])
+        print(f"\nCompliance summary (EPA Tier 4):")
+        print(f"  NOx failures : {nox_failures:,} / {total_rows:,} ({100*nox_failures/total_rows:.1f}%)")
+        print(f"  PM failures  : {pm_failures:,} / {total_rows:,} ({100*pm_failures/total_rows:.1f}%)")
+
+    return all_rows
+
+
+if __name__ == "__main__":
+    output_file = os.path.join(os.path.dirname(__file__), "dyno_emissions_data.csv")
+    generate_dataset(
+        num_tests=20,
+        num_samples_per_mode=10,
+        output_path=output_file,
+    )

@@ -1,0 +1,167 @@
+# models/staging/schema.yml
+# =============================================================
+# Testes de qualidade e documentação dos modelos dbt
+# Compatível com dbt 1.11
+# =============================================================
+
+version: 2
+
+models:
+  - name: stg_dyno_measurements
+    description: >
+      Silver layer. Cleaned and standardized dynamometer measurements.
+      Derived columns added: load_category, bsfc_g_kwh, overall compliance flags.
+
+    columns:
+      - name: test_id
+        description: Unique test run identifier
+        tests:
+          - not_null
+
+      - name: engine_id
+        description: Engine under test
+        tests:
+          - not_null
+
+      - name: whsc_mode
+        description: WHSC mode (1-13)
+        tests:
+          - not_null
+
+      - name: load_category
+        description: Load category derived from torque percentage
+        tests:
+          - not_null
+
+      - name: timestamp
+        description: Measurement timestamp UTC
+        tests:
+          - not_null
+
+      - name: rpm
+        description: Engine speed in RPM
+        tests:
+          - not_null
+
+      - name: torque_nm
+        description: Engine torque in Nm
+        tests:
+          - not_null
+
+      - name: power_kw
+        description: Brake power in kW
+        tests:
+          - not_null
+
+      - name: nox_g_kwh
+        description: NOx emissions in g/kWh
+        tests:
+          - not_null
+
+      - name: co_g_kwh
+        description: CO emissions in g/kWh
+        tests:
+          - not_null
+
+      - name: co2_g_kwh
+        description: CO2 emissions in g/kWh
+        tests:
+          - not_null
+
+      - name: hc_g_kwh
+        description: HC emissions in g/kWh
+        tests:
+          - not_null
+
+      - name: pm_g_kwh
+        description: Particulate matter in g/kWh
+        tests:
+          - not_null
+
+      - name: epa_tier4_overall_pass
+        description: True if all four pollutants pass EPA Tier 4 Final limits
+        tests:
+          - not_null
+
+      - name: euro6_overall_pass
+        description: True if all four pollutants pass Euro VI limits
+        tests:
+          - not_null
+
+  - name: emissions_compliance
+    description: >
+      Gold layer. WHSC weighted emissions per test run vs EPA Tier 4 and Euro VI limits.
+      One row per test run. Use this for regulatory reporting and compliance dashboards.
+
+    columns:
+      - name: test_id
+        description: Unique test run identifier
+        tests:
+          - not_null
+          - unique
+
+      - name: engine_id
+        description: Engine under test
+        tests:
+          - not_null
+
+      - name: weighted_nox_g_kwh
+        description: WHSC weighted NOx in g/kWh — EPA Tier 4 limit is 0.40
+        tests:
+          - not_null
+
+      - name: weighted_co_g_kwh
+        description: WHSC weighted CO in g/kWh
+        tests:
+          - not_null
+
+      - name: weighted_pm_g_kwh
+        description: WHSC weighted PM in g/kWh
+        tests:
+          - not_null
+
+      - name: epa_tier4_approved
+        description: True if all pollutants pass EPA Tier 4 Final limits
+        tests:
+          - not_null
+
+      - name: euro6_approved
+        description: True if all pollutants pass Euro VI limits
+        tests:
+          - not_null
+
+  - name: engine_performance
+    description: >
+      Gold layer. Engine efficiency metrics by WHSC mode and load category.
+      Includes BSFC, power curves, temperatures and NOx rankings between engines.
+
+    columns:
+      - name: engine_id
+        description: Engine under test
+        tests:
+          - not_null
+
+      - name: whsc_mode
+        description: WHSC mode number
+        tests:
+          - not_null
+
+      - name: avg_bsfc_g_kwh
+        description: Average brake specific fuel consumption in g/kWh
+        tests:
+          - not_null
+
+      - name: avg_power_kw
+        description: Average brake power in kW
+        tests:
+          - not_null
+
+      - name: bsfc_rank_in_mode
+        description: BSFC ranking within mode — 1 means most efficient engine
+        tests:
+          - not_null
+
+      - name: nox_rank_in_mode
+        description: NOx ranking within mode — 1 means lowest NOx engine
+        tests:
+          - not_null

@@ -1,0 +1,103 @@
+# models/staging/sources.yml
+# =============================================================
+# Declara a fonte de dados do BigQuery para o dbt
+# Compatível com dbt 1.11
+# =============================================================
+
+version: 2
+
+sources:
+  - name: diesel_raw
+    database: whsc-homologacao
+    schema: diesel_raw
+    description: >
+      Raw (bronze) layer. Diesel engine dynamometer measurements
+      loaded directly from GCS. No transformations applied.
+
+    tables:
+      - name: dyno_measurements
+        description: >
+          Raw WHSC cycle measurements. One row per sensor reading.
+          Includes engine operating conditions, exhaust emissions
+          and EPA Tier 4 / Euro VI compliance flags.
+
+        columns:
+          - name: test_id
+            description: Unique test run identifier
+            tests:
+              - not_null
+
+          - name: engine_id
+            description: Engine under test identifier
+            tests:
+              - not_null
+
+          - name: whsc_mode
+            description: WHSC mode number 1 to 13
+            tests:
+              - not_null
+
+          - name: timestamp
+            description: Measurement timestamp UTC
+            tests:
+              - not_null
+
+          - name: rpm
+            description: Engine speed in RPM
+            tests:
+              - not_null
+
+          - name: torque_nm
+            description: Engine torque in Nm
+            tests:
+              - not_null
+
+          - name: power_kw
+            description: Brake power in kW
+            tests:
+              - not_null
+
+          - name: nox_g_kwh
+            description: NOx emissions in g/kWh
+            tests:
+              - not_null
+
+          - name: co_g_kwh
+            description: CO emissions in g/kWh
+            tests:
+              - not_null
+
+          - name: co2_g_kwh
+            description: CO2 emissions in g/kWh
+            tests:
+              - not_null
+
+          - name: hc_g_kwh
+            description: HC emissions in g/kWh
+            tests:
+              - not_null
+
+          - name: pm_g_kwh
+            description: Particulate matter in g/kWh
+            tests:
+              - not_null
+
+          - name: epa_tier4_nox_pass
+            description: NOx within EPA Tier 4 Final limit
+            tests:
+              - not_null
+
+          - name: epa_tier4_pm_pass
+            description: PM within EPA Tier 4 Final limit
+            tests:
+              - not_null
+
+          - name: euro6_nox_pass
+            description: NOx within Euro VI limit
+            tests:
+              - not_null
+
+          - name: euro6_pm_pass
+            description: PM within Euro VI limit
+            tests:
+              - not_null
