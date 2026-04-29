@@ -48,28 +48,28 @@ cleaned as (
         round(oil_temp_c, 1)         as oil_temp_c,
         round(intake_air_temp_c, 1)  as intake_air_temp_c,
 
-        -- Compliance flags — EPA Tier 4
-        epa_tier4_nox_pass,
-        epa_tier4_co_pass,
-        epa_tier4_hc_pass,
-        epa_tier4_pm_pass,
+        -- Compliance flags — EPA Tier 4 (calculados a partir dos limites em dbt_project.yml)
+        nox_g_kwh <= {{ var('epa_tier4_nox_limit') }}  as epa_tier4_nox_pass,
+        co_g_kwh  <= {{ var('epa_tier4_co_limit') }}   as epa_tier4_co_pass,
+        hc_g_kwh  <= {{ var('epa_tier4_hc_limit') }}   as epa_tier4_hc_pass,
+        pm_g_kwh  <= {{ var('epa_tier4_pm_limit') }}   as epa_tier4_pm_pass,
 
         -- Compliance flags — Euro VI
-        euro6_nox_pass,
-        euro6_co_pass,
-        euro6_hc_pass,
-        euro6_pm_pass,
+        nox_g_kwh <= {{ var('euro6_nox_limit') }}      as euro6_nox_pass,
+        co_g_kwh  <= {{ var('euro6_co_limit') }}       as euro6_co_pass,
+        hc_g_kwh  <= {{ var('euro6_hc_limit') }}       as euro6_hc_pass,
+        pm_g_kwh  <= {{ var('euro6_pm_limit') }}       as euro6_pm_pass,
 
         -- Derived: overall compliance (all pollutants must pass)
-        (epa_tier4_nox_pass
-            and epa_tier4_co_pass
-            and epa_tier4_hc_pass
-            and epa_tier4_pm_pass)   as epa_tier4_overall_pass,
+        (nox_g_kwh <= {{ var('epa_tier4_nox_limit') }}
+            and co_g_kwh <= {{ var('epa_tier4_co_limit') }}
+            and hc_g_kwh <= {{ var('epa_tier4_hc_limit') }}
+            and pm_g_kwh <= {{ var('epa_tier4_pm_limit') }}) as epa_tier4_overall_pass,
 
-        (euro6_nox_pass
-            and euro6_co_pass
-            and euro6_hc_pass
-            and euro6_pm_pass)       as euro6_overall_pass,
+        (nox_g_kwh <= {{ var('euro6_nox_limit') }}
+            and co_g_kwh <= {{ var('euro6_co_limit') }}
+            and hc_g_kwh <= {{ var('euro6_hc_limit') }}
+            and pm_g_kwh <= {{ var('euro6_pm_limit') }})     as euro6_overall_pass,
 
         -- Derived: load category based on torque %
         case

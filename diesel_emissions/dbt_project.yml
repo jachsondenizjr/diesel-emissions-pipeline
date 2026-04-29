@@ -1,36 +1,38 @@
-
-# Name your project! Project names should contain only lowercase characters
-# and underscores. A good package name should reflect your organization's
-# name or the intended use of these models
 name: 'diesel_emissions'
 version: '1.0.0'
-
-# This setting configures which "profile" dbt uses for this project.
 profile: 'diesel_emissions'
 
-# These configurations specify where dbt should look for different types of files.
-# The `model-paths` config, for example, states that models in this project can be
-# found in the "models/" directory. You probably won't need to change these!
-model-paths: ["models"]
+model-paths:    ["models"]
 analysis-paths: ["analyses"]
-test-paths: ["tests"]
-seed-paths: ["seeds"]
-macro-paths: ["macros"]
+test-paths:     ["tests"]
+seed-paths:     ["seeds"]
+macro-paths:    ["macros"]
 snapshot-paths: ["snapshots"]
 
-clean-targets:         # directories to be removed by `dbt clean`
+clean-targets:
   - "target"
   - "dbt_packages"
 
+# ── Limites regulatórios (g/kWh) ───────────────────────────────────────────────
+# Fonte única de verdade para os modelos SQL.
+# Valores devem espelhar config.yaml > regulatory_limits.
+# Para alterar uma norma: edite config.yaml e atualize aqui.
+vars:
+  epa_tier4_nox_limit: 0.40
+  epa_tier4_co_limit:  3.50
+  epa_tier4_hc_limit:  0.19
+  epa_tier4_pm_limit:  0.02
+  euro6_nox_limit:     0.40
+  euro6_co_limit:      4.00
+  euro6_hc_limit:      0.16
+  euro6_pm_limit:      0.01
 
-# Configuring models
-# Full documentation: https://docs.getdbt.com/docs/configuring-models
-
-# In this example config, we tell dbt to build all models in the example/
-# directory as views. These settings can be overridden in the individual model
-# files using the `{{ config(...) }}` macro.
+# ── Materialização por camada ───────────────────────────────────────────────────
+# staging (Silver): view — sempre reflete o Bronze atual, sem custo de storage
+# marts   (Gold):   table — pré-computado para queries rápidas no Looker Studio
 models:
   diesel_emissions:
-    # Config indicated by + and applies to all files under models/example/
-    example:
+    staging:
       +materialized: view
+    marts:
+      +materialized: table

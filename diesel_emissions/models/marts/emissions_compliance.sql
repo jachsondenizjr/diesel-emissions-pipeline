@@ -68,21 +68,22 @@ compliance as (
     select
         *,
 
-        -- EPA Tier 4 Final limits (g/kWh)
-        weighted_nox_g_kwh <= 0.40                                   as epa_nox_pass,
-        weighted_co_g_kwh  <= 3.50                                   as epa_co_pass,
-        weighted_hc_g_kwh  <= 0.19                                   as epa_hc_pass,
-        weighted_pm_g_kwh  <= 0.02                                   as epa_pm_pass,
+        -- EPA Tier 4 Final limits — valores em dbt_project.yml > vars
+        weighted_nox_g_kwh <= {{ var('epa_tier4_nox_limit') }}       as epa_nox_pass,
+        weighted_co_g_kwh  <= {{ var('epa_tier4_co_limit') }}        as epa_co_pass,
+        weighted_hc_g_kwh  <= {{ var('epa_tier4_hc_limit') }}        as epa_hc_pass,
+        weighted_pm_g_kwh  <= {{ var('epa_tier4_pm_limit') }}        as epa_pm_pass,
 
-        -- Euro VI limits (g/kWh)
-        weighted_nox_g_kwh <= 0.40                                   as euro6_nox_pass,
-        weighted_co_g_kwh  <= 4.00                                   as euro6_co_pass,
-        weighted_hc_g_kwh  <= 0.16                                   as euro6_hc_pass,
-        weighted_pm_g_kwh  <= 0.01                                   as euro6_pm_pass,
+        -- Euro VI limits
+        weighted_nox_g_kwh <= {{ var('euro6_nox_limit') }}           as euro6_nox_pass,
+        weighted_co_g_kwh  <= {{ var('euro6_co_limit') }}            as euro6_co_pass,
+        weighted_hc_g_kwh  <= {{ var('euro6_hc_limit') }}            as euro6_hc_pass,
+        weighted_pm_g_kwh  <= {{ var('euro6_pm_limit') }}            as euro6_pm_pass,
 
         -- Margem em relação ao limite de NOx EPA (%)
         round(
-            (0.40 - weighted_nox_g_kwh) / 0.40 * 100, 1
+            ({{ var('epa_tier4_nox_limit') }} - weighted_nox_g_kwh)
+            / {{ var('epa_tier4_nox_limit') }} * 100, 1
         )                                                            as nox_margin_pct,
 
         -- Failure rate

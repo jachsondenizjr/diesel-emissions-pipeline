@@ -20,6 +20,7 @@ sources:
           Raw WHSC cycle measurements. One row per sensor reading.
           Includes engine operating conditions, exhaust emissions
           and EPA Tier 4 / Euro VI compliance flags.
+          Compliance flags are computed by the Silver layer (dbt).
 
         columns:
           - name: test_id
@@ -82,22 +83,3 @@ sources:
             tests:
               - not_null
 
-          - name: epa_tier4_nox_pass
-            description: NOx within EPA Tier 4 Final limit
-            tests:
-              - not_null
-
-          - name: epa_tier4_pm_pass
-            description: PM within EPA Tier 4 Final limit
-            tests:
-              - not_null
-
-          - name: euro6_nox_pass
-            description: NOx within Euro VI limit
-            tests:
-              - not_null
-
-          - name: euro6_pm_pass
-            description: PM within Euro VI limit
-            tests:
-              - not_null

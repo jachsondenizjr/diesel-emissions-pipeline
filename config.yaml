@@ -1,0 +1,63 @@
+# ── GCP ────────────────────────────────────────────────────────────────────────
+gcp:
+  project_id: whsc-homologacao
+  region: US
+  credentials_path: C:\Aula\Aula+Python\secret\whsc-homologacao-bad620c810f0.json
+
+# ── GCS ────────────────────────────────────────────────────────────────────────
+gcs:
+  bucket: whsc-homolo
+  raw_prefix: raw/dyno_emissions
+
+# ── BigQuery ───────────────────────────────────────────────────────────────────
+bigquery:
+  dataset_raw: diesel_raw
+  table_raw: dyno_measurements
+
+# ── Local ──────────────────────────────────────────────────────────────────────
+local:
+  csv_path: dyno_emissions_data.csv
+
+# ── Regulatory emission limits (g/kWh) ─────────────────────────────────────────
+# Fonte única para o pipeline Python E para as vars do dbt.
+# Qualquer alteração de norma deve ser feita apenas aqui.
+regulatory_limits:
+  epa_tier4:
+    nox: 0.40
+    co: 3.50
+    hc: 0.19
+    pm: 0.02
+  euro6:
+    nox: 0.40
+    co: 4.00
+    hc: 0.16
+    pm: 0.01
+
+# ── Simulation parameters ──────────────────────────────────────────────────────
+simulation:
+  test_runs: 20
+  samples_per_mode: 10
+  random_seed: 42
+  engines: [ENG-001, ENG-002, ENG-003]
+  test_cells: [DYNO-A, DYNO-B]
+  engine_rated_rpm: 2200
+  engine_max_torque_nm: 1800
+
+# ── WHSC cycle modes (ISO 8178-4 Annex B) ─────────────────────────────────────
+# speed_pct    : % da rotação nominal (2200 RPM)
+# torque_pct   : % do torque máximo (1800 Nm)
+# weight_factor: fator de ponderação oficial (soma = 1.00)
+whsc_modes:
+  1:  { speed_pct:   0, torque_pct:   0, weight_factor: 0.15 }  # idle
+  2:  { speed_pct: 100, torque_pct: 100, weight_factor: 0.08 }  # A-100
+  3:  { speed_pct:  75, torque_pct:  50, weight_factor: 0.10 }  # B-50
+  4:  { speed_pct:  75, torque_pct:  75, weight_factor: 0.10 }  # B-75
+  5:  { speed_pct: 100, torque_pct:  50, weight_factor: 0.05 }  # A-50
+  6:  { speed_pct: 100, torque_pct:  75, weight_factor: 0.05 }  # A-75
+  7:  { speed_pct: 100, torque_pct:  25, weight_factor: 0.05 }  # A-25
+  8:  { speed_pct:  75, torque_pct: 100, weight_factor: 0.09 }  # B-100
+  9:  { speed_pct:  75, torque_pct:  25, weight_factor: 0.10 }  # B-25
+  10: { speed_pct:  50, torque_pct: 100, weight_factor: 0.08 }  # C-100
+  11: { speed_pct:  50, torque_pct:  25, weight_factor: 0.05 }  # C-25
+  12: { speed_pct:  50, torque_pct:  75, weight_factor: 0.05 }  # C-75
+  13: { speed_pct:  50, torque_pct:  50, weight_factor: 0.05 }  # C-50
