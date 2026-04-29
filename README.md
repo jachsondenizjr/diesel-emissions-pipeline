@@ -195,6 +195,18 @@ The pipeline processes 20 WHSC test runs across 3 engines (ENG-001, ENG-002, ENG
 - Euro VI PM limit (0.01 g/kWh) is the most restrictive constraint across all test runs
 
 ---
+## Screenshots
+
+### Airflow Pipeline Graph
+![Airflow DAG](images/airflow_dag.png)
+
+### dbt Data Lineage
+![dbt Lineage](images/dbt_lineage.png)
+
+### Looker Studio Dashboard
+![Dashboard](images/dashboard.png)
+
+---
 
 ## About
 
