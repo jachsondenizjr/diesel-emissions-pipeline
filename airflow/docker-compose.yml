@@ -1,0 +1,108 @@
+# docker-compose.yml
+# ================================================================
+# Apache Airflow 2.9 — Local setup for diesel-emissions-pipeline
+# ================================================================
+# Services:
+#   - airflow-webserver  : UI at http://localhost:8080
+#   - airflow-scheduler  : DAG scheduler
+#   - airflow-init       : Database initialization
+#   - postgres           : Airflow metadata database
+#
+# Usage:
+#   docker compose up -d
+#   Open http://localhost:8080 (admin / admin)
+# ================================================================
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.3
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    # GCP credentials — mounted from host
+    GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/secret/whsc-homologacao-bad620c810f0.json
+    GCP_PROJECT_ID: whsc-homologacao
+    GCS_BUCKET_NAME: whsc-homolo
+    BQ_DATASET_RAW: diesel_raw
+    BQ_TABLE_RAW: dyno_measurements
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    # Mount credentials folder (read-only)
+    - C:/Aula/Aula+Python/secret:/opt/airflow/secret:ro
+    # Mount pipeline scripts
+    - ./..:/opt/airflow/pipeline:ro
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db init &&
+        airflow users create \
+          --username admin \
+          --firstname Jachson \
+          --lastname Deniz \
+          --role Admin \
+          --email jachson.denizjr@gmail.com \
+          --password admin
+    restart: on-failure
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
