@@ -3,6 +3,11 @@
 End-to-end data engineering pipeline for diesel engine emissions analysis, built on GCP. Simulates a real-world homologation environment using the WHSC (World Harmonized Stationary Cycle) and validates exhaust emissions against EPA Tier 4 Final and Euro VI regulatory limits.
 
 ---
+## Live Dashboard
+
+📊 [View Emissions Compliance Dashboard](https://datastudio.google.com/reporting/29e6720c-23b7-42fc-be08-e3053ae8b81c)
+
+---
 
 ## Architecture
 
